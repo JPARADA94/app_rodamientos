@@ -8,7 +8,7 @@ Original file is located at
 """
 
 # app_rodamientos.py
-# Selector de grasa para rodamientos usando el método SKF
+# Selector de grasa para rodamientos usando el mé
 
 # 1. Importamos librerías necesarias
 import streamlit as st            # Para la interfaz web
@@ -83,7 +83,7 @@ def select_thickener(ambiente):
 # 4. Función principal de Streamlit
 
 def main():
-    st.title("Selector de Grasa para Rodamientos (SKF)")
+    st.title("Selector de Grasa para Rodamientos ")
 
     # Entradas del usuario
     tipo     = st.selectbox("Tipo de rodamiento", ["Bolas", "Rodillos", "Cónico", "Axial"])
