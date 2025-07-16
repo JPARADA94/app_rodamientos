@@ -7,8 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/15sNpizGLj5m3KgxuqXb4LFBe9iSLROhP
 """
 
-!pip install streamlit fpdf colabcode
-
 # app_rodamientos.py
 # Selector de grasa para rodamientos usando el método SKF
 
