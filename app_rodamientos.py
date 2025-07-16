@@ -95,14 +95,14 @@ def main():
 
         # Mostrar resultados
         st.subheader("Resultados SKF")
-        st.write(f"• DN (n·Dm): **{DN:.0f}** mm/min")
-        st.write(f"• Viscosidad base ν40: **{visc40:.1f}** cSt")
-        st.write(f"• Viscosidad ajustada: **{visc_corr:.1f}** cSt")
-        st.write(f"• Factor Ks: **{Ks:.1f}**")
-        st.write(f"• NLGI recomendado: **{NLGI}**")
-        st.write(f"• Tipo de espesante: **{espesante}**")
-        st.write(f"• Tipo de base: **{base}**")
-        st.write(f"• Intervalo de relubricación: **{intervalo}** horas")
+        st.write(f"• DN (n·Dm): {DN:.0f} mm/min")
+        st.write(f"• Viscosidad base ν40: {visc40:.1f} cSt")
+        st.write(f"• Viscosidad ajustada: {visc_corr:.1f} cSt")
+        st.write(f"• Factor Ks: {Ks:.1f}")
+        st.write(f"• NLGI recomendado: {NLGI}")
+        st.write(f"• Tipo de espesante: {espesante}")
+        st.write(f"• Tipo de base: {base}")
+        st.write(f"• Intervalo de relubricación: {intervalo} horas")
 
         # Generar PDF resumen
         pdf = FPDF()
@@ -114,4 +114,25 @@ def main():
         lines = [
             f"Rodamiento: {tipo}",
             f"DN={DN:.0f} mm/min",
-            f"Viscosidad
+            f"Viscosidad base ν40: {visc40:.1f} cSt",
+            f"Viscosidad ajustada: {visc_corr:.1f} cSt",
+            f"Ks={Ks:.1f}, NLGI={NLGI}",
+            f"Espesante: {espesante}",
+            f"Base: {base}",
+            f"Intervalo: {intervalo} horas",
+            f"Ambiente: {', '.join(ambiente) or 'Ninguno'}"
+        ]
+        for line in lines:
+            pdf.cell(0, 8, line, ln=True)
+
+        pdf_output = pdf.output(dest="S").encode('latin-1')
+        st.download_button(
+            "Descargar PDF SKF",
+            data=pdf_output,
+            file_name="analisis_seleccion_grasa_skf.pdf",
+            mime="application/pdf"
+        )
+
+# Punto de entrada
+if __name__ == "__main__":
+    main()
