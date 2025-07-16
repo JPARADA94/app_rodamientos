@@ -1,5 +1,6 @@
 # app_rodamientos.py
 # Selector de grasa para rodamientos
+# Coloca tus imágenes en la carpeta 'images/' junto al script (GitHub → Add file → Upload files)
 
 import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
@@ -21,7 +22,44 @@ st.set_page_config(
 A = 0.7    # Constante A de la fórmula de viscosidad
 B = 0.23   # Exponente B de la fórmula de viscosidad
 
-# Umbrales para grado de consistencia NLGI según Ks = DN / v40
+# =====================
+# Definición de cargas de trabajo
+# =====================
+# Cómo identificar la carga:
+# - Baja: Aplicaciones ligeras (ventiladores domésticos, pequeños motores eléctricos sin impacto).
+# - Media: Uso general (bombas de agua, motores industriales con carga constante).
+# - Alta: Cargas pesadas o impactos (equipos de minería, prensas, grandes compresores).
+
+LOAD_FACTORS = {
+    "Baja": 1.0,
+    "Media": 1.2,
+    "Alta": 1.5,
+}
+
+# Descripciones ampliadas de cada nivel de carga
+LOAD_DESCR = {
+    "Baja": (
+        "Aplicaciones ligeras como ventiladores o motores de baja potencia. "
+        "Sin golpes ni vibraciones fuertes."
+    ),
+    "Media": (
+        "Uso industrial normal como bombas, compresores o motores con carga moderada. "
+        "Puede tener vibraciones ocasionales."
+    ),
+    "Alta": (
+        "Aplicaciones pesadas con impactos o vibraciones continuas, "
+        "por ejemplo prensas, equipos de minería o grandes compresores."
+    ),
+}
+
+# =====================
+# Umbrales para grado de consistencia NLGI
+# =====================
+# Ks = DN / v40, rangos:
+#   Ks ≤ 80   → NLGI 3
+#   80 < Ks ≤ 160 → NLGI 2
+#   160 < Ks ≤ 240 → NLGI 1
+#   Ks > 240  → NLGI 0
 NLGI_THRESHOLDS = [
     (80,   "3"),
     (160,  "2"),
@@ -29,17 +67,9 @@ NLGI_THRESHOLDS = [
     (np.inf, "0"),
 ]
 
-# Factores de corrección por carga de trabajo
-LOAD_FACTORS = {"Baja": 1.0, "Media": 1.2, "Alta": 1.5}
-
-# Descripciones de las condiciones de carga
-LOAD_DESCR = {
-    "Baja": "Aplicaciones ligeras, baja presión, movimiento moderado.",
-    "Media": "Uso normal, cargas intermitentes o moderadas.",
-    "Alta": "Cargas elevadas, impacto o vibraciones intensas."
-}
-
+# =====================
 # Tipos de rodamientos y sus imágenes
+# =====================
 BEARING_TYPES = {
     "Bolas": "images/rodamientos_bolas.png",
     "Rodillos": "images/rodamientos_rodillos.png",
@@ -51,37 +81,22 @@ BEARING_TYPES = {
 # Funciones auxiliares
 # =====================
 
-def calc_Dm(d, D):
-    """Calcula el diámetro medio Dm en mm."""
-    return (d + D) / 2
+def calc_Dm(d, D): return (d + D) / 2
 
+def calc_DN(n, Dm): return n * Dm
 
-def calc_DN(n, Dm):
-    """Calcula el factor de velocidad DN = RPM × Dm."""
-    return n * Dm
+def calc_base_viscosity(DN): return A * (DN ** B)
 
-
-def calc_base_viscosity(DN):
-    """Calcula la viscosidad base (cSt @40 °C)."""
-    return A * (DN ** B)
-
-
-def adjust_for_load(visc40, carga):
-    """Corrige la viscosidad base según la carga."""
-    return visc40 * LOAD_FACTORS[carga]
-
+def adjust_for_load(visc40, carga): return visc40 * LOAD_FACTORS[carga]
 
 def select_NLGI(DN, visc40):
-    """Calcula Ks y asigna un grado NLGI."""
     Ks = DN / visc40
     for threshold, grade in NLGI_THRESHOLDS:
         if Ks <= threshold:
             return grade, Ks
     return "2", Ks
 
-
 def select_thickener(ambiente):
-    """Elige el tipo de espesante según el ambiente."""
     if "Agua" in ambiente or "Vibración" in ambiente:
         return "Sulfonato de calcio complejo"
     return "Complejo de litio"
@@ -96,9 +111,9 @@ st.sidebar.markdown("**Empresa: Mobil**")
 st.sidebar.markdown("---")
 st.sidebar.markdown("### Objetivos de la app:")
 st.sidebar.markdown(
-    "- Seleccionar la grasa adecuada según parámetros técnicos\n"
-    "- Mostrar tipos de rodamientos y sus dimensiones\n"
-    "- Ofrecer múltiples opciones de aceite base"
+    "- Seleccionar la grasa adecuada según parámetros técnicos.\n"
+    "- Mostrar tipos de rodamientos y sus dimensiones.\n"
+    "- Ofrecer múltiples opciones de aceite base."
 )
 
 # =====================
@@ -107,22 +122,25 @@ st.sidebar.markdown(
 def main():
     st.title("Selector de Grasa para Rodamientos")
     st.markdown(
-        "Complete los datos del rodamiento y condiciones de operación, "
-        "explore las ayudas visuales y descargue su informe."
+        "Complete los datos y determine la carga usando ejemplos claros."
     )
+    st.markdown("---")
 
-    # Instrucciones y descripciones
-    with st.expander("Instrucciones de uso"):
+    # Instrucciones de uso
+    with st.expander("Cómo usar la app"):
         st.write(
-            "1. Introduzca datos de velocidad, diámetros, temperatura y carga.\n"
-            "2. Consulte la explicación de cargas y tipos de rodamientos.\n"
-            "3. Pulse 'Calcular' para ver resultados y descargar PDF."
+            "1. Indique el tipo de rodamiento y sus medidas.\n"
+            "2. Estime la carga: consulte los ejemplos en la descripción de cargas.\n"
+            "3. Seleccione temperatura, condición de carga y ambiente.\n"
+            "4. Haga clic en 'Calcular' para ver recomendaciones y descargar PDF."
         )
 
-    with st.expander("Descripción de la carga"):
+    # Explicación de condiciones de carga
+    with st.expander("Definición de carga de trabajo"):
         for lvl, desc in LOAD_DESCR.items():
             st.write(f"**{lvl}**: {desc}")
 
+    # Visualización de rodamientos
     with st.expander("Tipos de rodamientos"):
         cols = st.columns(len(BEARING_TYPES))
         for i, (name, img) in enumerate(BEARING_TYPES.items()):
@@ -140,32 +158,26 @@ def main():
     carga    = st.selectbox("Condición de carga", list(LOAD_FACTORS.keys()))
     ambiente = st.multiselect("Ambiente de operación", ["Agua", "Polvo", "Alta temperatura", "Vibración"])
 
-    # Botón de cálculo
     if st.button("Calcular"):
-        # Cálculos
         Dm        = calc_Dm(d, D)
         DN        = calc_DN(rpm, Dm)
         visc40    = calc_base_viscosity(DN)
         visc_corr = adjust_for_load(visc40, carga)
         NLGI, Ks  = select_NLGI(DN, visc40)
         espesante = select_thickener(ambiente)
-        
-        # Opciones de aceite base
-        bases = ["Mineral", "Semi-sintética", "Sintética"]
+        bases     = ["Mineral", "Semi-sintética", "Sintética"]
 
-        # Mostrar resultados
         st.subheader("Resultados")
         st.write(f"DN (n·Dm): {DN:.0f} mm/min")
         st.write(f"Viscosidad base (v40): {visc40:.1f} cSt")
         st.write(f"Viscosidad ajustada: {visc_corr:.1f} cSt")
         st.write(f"Factor Ks: {Ks:.1f}")
         st.write(f"NLGI recomendado: {NLGI}")
-        st.write(f"Tipo de espesante: {espesante}")
+        st.write(f"Espesante: {espesante}")
         st.write("Opciones de aceite base:")
         for b in bases:
             st.write(f"- {b}")
 
-        # Generar PDF resumen
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
