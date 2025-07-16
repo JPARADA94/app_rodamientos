@@ -1,6 +1,5 @@
 # app_rodamientos.py
-# Selector de grasa para rodamientos
-# Coloca tus imágenes en la carpeta 'images/' junto al script (GitHub → Add file → Upload files)
+# Selector de grasa para rodamientos (con posición de montaje)
 
 import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
@@ -25,47 +24,32 @@ B = 0.23   # Exponente B de la fórmula de viscosidad
 # =====================
 # Definición de cargas de trabajo
 # =====================
-# Cómo identificar la carga:
-# - Baja: Aplicaciones ligeras (ventiladores domésticos, pequeños motores eléctricos sin impacto).
-# - Media: Uso general (bombas de agua, motores industriales con carga constante).
-# - Alta: Cargas pesadas o impactos (equipos de minería, prensas, grandes compresores).
-
-LOAD_FACTORS = {
-    "Baja": 1.0,
-    "Media": 1.2,
-    "Alta": 1.5,
-}
-
-# Descripciones ampliadas de cada nivel de carga
+LOAD_FACTORS = {"Baja": 1.0, "Media": 1.2, "Alta": 1.5}
 LOAD_DESCR = {
-    "Baja": (
-        "Aplicaciones ligeras como ventiladores o motores de baja potencia. "
-        "Sin golpes ni vibraciones fuertes."
-    ),
-    "Media": (
-        "Uso industrial normal como bombas, compresores o motores con carga moderada. "
-        "Puede tener vibraciones ocasionales."
-    ),
-    "Alta": (
-        "Aplicaciones pesadas con impactos o vibraciones continuas, "
-        "por ejemplo prensas, equipos de minería o grandes compresores."
-    ),
+    "Baja": "Aplicaciones ligeras (e.g., ventiladores domésticos) sin golpes.",
+    "Media": "Uso industrial normal (e.g., bombas) con vibraciones moderadas.",
+    "Alta": "Cargas pesadas o continuas vibraciones (e.g., prensas, maquinaria).",
 }
 
 # =====================
-# Umbrales para grado de consistencia NLGI
+# Definición de posiciones de montaje
 # =====================
-# Ks = DN / v40, rangos:
-#   Ks ≤ 80   → NLGI 3
-#   80 < Ks ≤ 160 → NLGI 2
-#   160 < Ks ≤ 240 → NLGI 1
-#   Ks > 240  → NLGI 0
-NLGI_THRESHOLDS = [
-    (80,   "3"),
-    (160,  "2"),
-    (240,  "1"),
-    (np.inf, "0"),
-]
+# Esto afecta principalmente al intervalo de relubricación
+pos_factors = {
+    "Horizontal": 1.0,
+    "Vertical (eje arriba)": 0.75,
+    "Vertical (eje abajo)": 0.5,
+}
+POS_DESCR = {
+    "Horizontal": "Eje horizontal: retención de grasa estándar.",
+    "Vertical (eje arriba)": "Eje vertical con eje arriba: posible escurrimiento.",
+    "Vertical (eje abajo)": "Eje vertical con eje abajo: mayor riesgo de pérdida de grasa.",
+}
+
+# =====================
+# Umbrales NLGI
+# =====================
+NLGI_THRESHOLDS = [(80, "3"), (160, "2"), (240, "1"), (np.inf, "0")]
 
 # =====================
 # Tipos de rodamientos y sus imágenes
@@ -91,8 +75,8 @@ def adjust_for_load(visc40, carga): return visc40 * LOAD_FACTORS[carga]
 
 def select_NLGI(DN, visc40):
     Ks = DN / visc40
-    for threshold, grade in NLGI_THRESHOLDS:
-        if Ks <= threshold:
+    for thr, grade in NLGI_THRESHOLDS:
+        if Ks <= thr:
             return grade, Ks
     return "2", Ks
 
@@ -102,18 +86,17 @@ def select_thickener(ambiente):
     return "Complejo de litio"
 
 # =====================
-# Barra lateral: logo e información
+# Sidebar: logo e información
 # =====================
 if os.path.exists("logo_mobil.png"):
     st.sidebar.image("logo_mobil.png", use_column_width=True)
 st.sidebar.markdown("## Creado por Javier Parada")
 st.sidebar.markdown("**Empresa: Mobil**")
 st.sidebar.markdown("---")
-st.sidebar.markdown("### Objetivos de la app:")
+st.sidebar.markdown("### Objetivos:")
 st.sidebar.markdown(
-    "- Seleccionar la grasa adecuada según parámetros técnicos.\n"
-    "- Mostrar tipos de rodamientos y sus dimensiones.\n"
-    "- Ofrecer múltiples opciones de aceite base."
+    "- Seleccionar grasa según condiciones reales\n"
+    "- Ajustar intervalo según posición de montaje"
 )
 
 # =====================
@@ -121,26 +104,24 @@ st.sidebar.markdown(
 # =====================
 def main():
     st.title("Selector de Grasa para Rodamientos")
-    st.markdown(
-        "Complete los datos y determine la carga usando ejemplos claros."
-    )
+    st.markdown("Complete los datos y explore las ayudas para carga y posición.")
     st.markdown("---")
 
-    # Instrucciones de uso
     with st.expander("Cómo usar la app"):
         st.write(
-            "1. Indique el tipo de rodamiento y sus medidas.\n"
-            "2. Estime la carga: consulte los ejemplos en la descripción de cargas.\n"
-            "3. Seleccione temperatura, condición de carga y ambiente.\n"
-            "4. Haga clic en 'Calcular' para ver recomendaciones y descargar PDF."
+            "1. Introduzca medidas y condiciones.\n"
+            "2. Consulte definiciones de carga y posición.\n"
+            "3. Pulse 'Calcular' para ver resultados y PDF."
         )
 
-    # Explicación de condiciones de carga
-    with st.expander("Definición de carga de trabajo"):
+    with st.expander("Carga de trabajo"):
         for lvl, desc in LOAD_DESCR.items():
             st.write(f"**{lvl}**: {desc}")
 
-    # Visualización de rodamientos
+    with st.expander("Posición de montaje"):
+        for pos, desc in POS_DESCR.items():
+            st.write(f"**{pos}**: {desc}")
+
     with st.expander("Tipos de rodamientos"):
         cols = st.columns(len(BEARING_TYPES))
         for i, (name, img) in enumerate(BEARING_TYPES.items()):
@@ -149,13 +130,13 @@ def main():
             else:
                 cols[i].write(f"Imagen no encontrada: {name}")
 
-    # Entradas del formulario
     tipo     = st.selectbox("Tipo de rodamiento", list(BEARING_TYPES.keys()))
-    rpm      = st.number_input("Velocidad (RPM)", min_value=0.0, value=1500.0)
-    d        = st.number_input("Diámetro interior (mm)", min_value=0.0, value=50.0)
-    D        = st.number_input("Diámetro exterior (mm)", min_value=0.0, value=90.0)
-    temp     = st.number_input("Temperatura (°C)", min_value=-50.0, max_value=200.0, value=60.0)
+    rpm      = st.number_input("Velocidad (RPM)", value=1500.0)
+    d        = st.number_input("Diámetro interior (mm)", value=50.0)
+    D        = st.number_input("Diámetro exterior (mm)", value=90.0)
+    temp     = st.number_input("Temperatura (°C)", value=60.0)
     carga    = st.selectbox("Condición de carga", list(LOAD_FACTORS.keys()))
+    posicion = st.selectbox("Posición de montaje", list(pos_factors.keys()))
     ambiente = st.multiselect("Ambiente de operación", ["Agua", "Polvo", "Alta temperatura", "Vibración"])
 
     if st.button("Calcular"):
@@ -166,14 +147,16 @@ def main():
         NLGI, Ks  = select_NLGI(DN, visc40)
         espesante = select_thickener(ambiente)
         bases     = ["Mineral", "Semi-sintética", "Sintética"]
+        interval_base = 2000 / LOAD_FACTORS[carga]
+        interval     = int(interval_base * pos_factors[posicion])
 
         st.subheader("Resultados")
         st.write(f"DN (n·Dm): {DN:.0f} mm/min")
-        st.write(f"Viscosidad base (v40): {visc40:.1f} cSt")
+        st.write(f"Viscosidad base: {visc40:.1f} cSt")
         st.write(f"Viscosidad ajustada: {visc_corr:.1f} cSt")
-        st.write(f"Factor Ks: {Ks:.1f}")
-        st.write(f"NLGI recomendado: {NLGI}")
+        st.write(f"NLGI: {NLGI} (Ks={Ks:.1f})")
         st.write(f"Espesante: {espesante}")
+        st.write(f"Intervalo relubricación: {interval} horas")
         st.write("Opciones de aceite base:")
         for b in bases:
             st.write(f"- {b}")
@@ -185,18 +168,20 @@ def main():
         pdf.ln(5)
         for line in [
             f"Rodamiento: {tipo}",
-            f"DN={DN:.0f} mm/min | v40={visc40:.1f} cSt, ajustada={visc_corr:.1f} cSt",
-            f"Ks={Ks:.1f}, NLGI={NLGI} | Espesante={espesante}",
-            f"Bases recomendadas: {', '.join(bases)}"
+            f"DN={DN:.0f} mm/min | temp={temp}ºC | carga={carga}",
+            f"Posición: {posicion} -> factor retención={pos_factors[posicion]:.2f}",
+            f"NLGI={NLGI} | viscosidad ajustada={visc_corr:.1f} cSt",
+            f"Espesante={espesante}",
+            f"Bases: {', '.join(bases)}",
+            f"Intervalo: {interval} h"
         ]:
             pdf.cell(0, 8, line, ln=True)
-        pdf_output = pdf.output(dest="S").encode('latin-1')
-        st.download_button(
-            "Descargar PDF",
-            data=pdf_output,
-            file_name="analisis_seleccion_grasa.pdf",
-            mime="application/pdf"
-        )
+        out = pdf.output(dest="S").encode('latin-1')
+        st.download_button("Descargar PDF", data=out,
+                           file_name="analisis_seleccion_grasa.pdf",
+                           mime="application/pdf")
 
 if __name__ == "__main__":
     main()
+
+
