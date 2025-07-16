@@ -1,15 +1,25 @@
 # app_rodamientos.py
-# Selector de grasa para rodamientos usando el método SKF
+# Selector de grasa para rodamientos
 
-import streamlit as st            # Framework web para la interfaz
+import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
 import numpy as np                # Para cálculos numéricos
+import os                         # Para manejo de archivos
 
 # =====================
-# Constantes y configuraciones SKF
+# Configuración de la página
 # =====================
-A_SKF = 0.7    # Constante A de la fórmula de viscosidad
-B_SKF = 0.23   # Exponente B de la fórmula de viscosidad
+st.set_page_config(
+    page_title="Selector de Grasa",
+    page_icon="🔧",
+    layout="wide"
+)
+
+# =====================
+# Parámetros de cálculo de viscosidad
+# =====================
+A = 0.7    # Constante A de la fórmula de viscosidad
+B = 0.23   # Exponente B de la fórmula de viscosidad
 
 # Umbrales para grado de consistencia NLGI según Ks = DN / v40
 NLGI_THRESHOLDS = [
@@ -19,11 +29,22 @@ NLGI_THRESHOLDS = [
     (np.inf, "0"),
 ]
 
-# Factores de corrección de viscosidad según carga de trabajo
-LOAD_FACTORS = {
-    "Baja": 1.0,
-    "Media": 1.2,
-    "Alta": 1.5,
+# Factores de corrección por carga de trabajo
+LOAD_FACTORS = {"Baja": 1.0, "Media": 1.2, "Alta": 1.5}
+
+# Descripciones de las condiciones de carga
+LOAD_DESCR = {
+    "Baja": "Aplicaciones ligeras, baja presión, movimiento moderado.",
+    "Media": "Uso normal, cargas intermitentes o moderadas.",
+    "Alta": "Cargas elevadas, impacto o vibraciones intensas."
+}
+
+# Tipos de rodamientos y sus imágenes
+BEARING_TYPES = {
+    "Bolas": "images/rodamientos_bolas.png",
+    "Rodillos": "images/rodamientos_rodillos.png",
+    "Cónico": "images/rodamientos_conico.png",
+    "Axial": "images/rodamientos_axial.png",
 }
 
 # =====================
@@ -36,22 +57,22 @@ def calc_Dm(d, D):
 
 
 def calc_DN(n, Dm):
-    """Calcula DN = velocidad (RPM) × diámetro medio (mm)."""
+    """Calcula el factor de velocidad DN = RPM × Dm."""
     return n * Dm
 
 
 def calc_base_viscosity(DN):
-    """Calcula la viscosidad base (cSt @40 °C) usando la fórmula SKF."""
-    return A_SKF * (DN ** B_SKF)
+    """Calcula la viscosidad base (cSt @40 °C)."""
+    return A * (DN ** B)
 
 
 def adjust_for_load(visc40, carga):
-    """Ajusta la viscosidad base según el nivel de carga."""
+    """Corrige la viscosidad base según la carga."""
     return visc40 * LOAD_FACTORS[carga]
 
 
 def select_NLGI(DN, visc40):
-    """Calcula el factor de consistencia Ks y asigna NLGI según umbrales."""
+    """Calcula Ks y asigna un grado NLGI."""
     Ks = DN / visc40
     for threshold, grade in NLGI_THRESHOLDS:
         if Ks <= threshold:
@@ -66,14 +87,52 @@ def select_thickener(ambiente):
     return "Complejo de litio"
 
 # =====================
+# Barra lateral: logo e información
+# =====================
+if os.path.exists("logo_mobil.png"):
+    st.sidebar.image("logo_mobil.png", use_column_width=True)
+st.sidebar.markdown("## Creado por Javier Parada")
+st.sidebar.markdown("**Empresa: Mobil**")
+st.sidebar.markdown("---")
+st.sidebar.markdown("### Objetivos de la app:")
+st.sidebar.markdown(
+    "- Seleccionar la grasa adecuada según parámetros técnicos\n"
+    "- Mostrar tipos de rodamientos y sus dimensiones\n"
+    "- Ofrecer múltiples opciones de aceite base"
+)
+
+# =====================
 # Función principal de Streamlit
 # =====================
-
 def main():
-    st.title("Selector de Grasa para Rodamientos (SKF)")
+    st.title("Selector de Grasa para Rodamientos")
+    st.markdown(
+        "Complete los datos del rodamiento y condiciones de operación, "
+        "explore las ayudas visuales y descargue su informe."
+    )
 
-    # Entradas del usuario
-    tipo     = st.selectbox("Tipo de rodamiento", ["Bolas", "Rodillos", "Cónico", "Axial"])
+    # Instrucciones y descripciones
+    with st.expander("Instrucciones de uso"):
+        st.write(
+            "1. Introduzca datos de velocidad, diámetros, temperatura y carga.\n"
+            "2. Consulte la explicación de cargas y tipos de rodamientos.\n"
+            "3. Pulse 'Calcular' para ver resultados y descargar PDF."
+        )
+
+    with st.expander("Descripción de la carga"):
+        for lvl, desc in LOAD_DESCR.items():
+            st.write(f"**{lvl}**: {desc}")
+
+    with st.expander("Tipos de rodamientos"):
+        cols = st.columns(len(BEARING_TYPES))
+        for i, (name, img) in enumerate(BEARING_TYPES.items()):
+            if os.path.exists(img):
+                cols[i].image(img, caption=name, use_column_width=True)
+            else:
+                cols[i].write(f"Imagen no encontrada: {name}")
+
+    # Entradas del formulario
+    tipo     = st.selectbox("Tipo de rodamiento", list(BEARING_TYPES.keys()))
     rpm      = st.number_input("Velocidad (RPM)", min_value=0.0, value=1500.0)
     d        = st.number_input("Diámetro interior (mm)", min_value=0.0, value=50.0)
     D        = st.number_input("Diámetro exterior (mm)", min_value=0.0, value=90.0)
@@ -83,56 +142,49 @@ def main():
 
     # Botón de cálculo
     if st.button("Calcular"):
-        # Cálculos SKF
+        # Cálculos
         Dm        = calc_Dm(d, D)
         DN        = calc_DN(rpm, Dm)
         visc40    = calc_base_viscosity(DN)
         visc_corr = adjust_for_load(visc40, carga)
         NLGI, Ks  = select_NLGI(DN, visc40)
         espesante = select_thickener(ambiente)
-        base      = "Sintetica" if temp > 100 else "Mineral"
-        intervalo = int(2000 / LOAD_FACTORS[carga])
+        
+        # Opciones de aceite base
+        bases = ["Mineral", "Semi-sintética", "Sintética"]
 
-        # Mostrar resultados sin caracteres especiales
-        st.subheader("Resultados SKF")
+        # Mostrar resultados
+        st.subheader("Resultados")
         st.write(f"DN (n·Dm): {DN:.0f} mm/min")
-        st.write(f"Viscosidad base v40: {visc40:.1f} cSt")
+        st.write(f"Viscosidad base (v40): {visc40:.1f} cSt")
         st.write(f"Viscosidad ajustada: {visc_corr:.1f} cSt")
         st.write(f"Factor Ks: {Ks:.1f}")
         st.write(f"NLGI recomendado: {NLGI}")
         st.write(f"Tipo de espesante: {espesante}")
-        st.write(f"Tipo de base: {base}")
-        st.write(f"Intervalo relubricacion: {intervalo} horas")
+        st.write("Opciones de aceite base:")
+        for b in bases:
+            st.write(f"- {b}")
 
-        # Generar PDF en latin1
+        # Generar PDF resumen
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, "Seleccion de Grasa (SKF) - Resumen", ln=True)
+        pdf.cell(0, 10, "Selección de Grasa - Resumen", ln=True)
         pdf.ln(5)
-
-        lines = [
+        for line in [
             f"Rodamiento: {tipo}",
-            f"DN={DN:.0f} mm/min",
-            f"Viscosidad base v40: {visc40:.1f} cSt",
-            f"Viscosidad ajustada: {visc_corr:.1f} cSt",
-            f"Ks={Ks:.1f}, NLGI={NLGI}",
-            f"Espesante: {espesante}",
-            f"Base: {base}",
-            f"Intervalo: {intervalo} horas",
-            f"Ambiente: {', '.join(ambiente) or 'Ninguno'}"
-        ]
-        for line in lines:
+            f"DN={DN:.0f} mm/min | v40={visc40:.1f} cSt, ajustada={visc_corr:.1f} cSt",
+            f"Ks={Ks:.1f}, NLGI={NLGI} | Espesante={espesante}",
+            f"Bases recomendadas: {', '.join(bases)}"
+        ]:
             pdf.cell(0, 8, line, ln=True)
-
         pdf_output = pdf.output(dest="S").encode('latin-1')
         st.download_button(
-            "Descargar PDF SKF",
+            "Descargar PDF",
             data=pdf_output,
-            file_name="analisis_seleccion_grasa_skf.pdf",
+            file_name="analisis_seleccion_grasa.pdf",
             mime="application/pdf"
         )
 
-# Punto de entrada
 if __name__ == "__main__":
     main()
