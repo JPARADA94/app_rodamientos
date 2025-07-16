@@ -1,54 +1,40 @@
 # app_rodamientos.py
-# Selector de grasa para rodamientos (versión profesional)
+# Selector de grasa para rodamientos (versión profesional con encabezado ajustado)
 
 import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
 import numpy as np                # Para cálculos numéricos
 import os                         # Para manejo de archivos
 
-# =====================
 # Configuración de la página
-# =====================
 st.set_page_config(
     page_title="Selector de Grasa",
     page_icon="🔧",
     layout="wide"
 )
 
-# =====================
 # Parámetros de cálculo
-# =====================
-A = 0.7    # Constante A de la fórmula de viscosidad
-B = 0.23   # Exponente B de la fórmula de viscosidad
+A = 0.7  # Constante A de la fórmula de viscosidad
+B = 0.23 # Exponente B de la fórmula de viscosidad
 
-# =====================
-# Definiciones de carga y montaje
-# =====================
+# Definición de cargas y montaje
 LOAD_FACTORS = {"Baja": 1.0, "Media": 1.2, "Alta": 1.5}
 LOAD_DESCR = {
     "Baja": "Aplicaciones ligeras (e.g., ventiladores domésticos) sin golpes.",
     "Media": "Uso industrial normal (e.g., bombas) con vibraciones moderadas.",
     "Alta": "Cargas pesadas o continuas vibraciones (e.g., prensas)."
 }
-pos_factors = {
-    "Horizontal": 1.0,
-    "Vertical (eje arriba)": 0.75,
-    "Vertical (eje abajo)": 0.5,
-}
+pos_factors = {"Horizontal": 1.0, "Vertical (eje arriba)": 0.75, "Vertical (eje abajo)": 0.5}
 POS_DESCR = {
     "Horizontal": "Eje horizontal: retención de grasa estándar.",
     "Vertical (eje arriba)": "Posición vertical (eje arriba): posible escurrimiento.",
     "Vertical (eje abajo)": "Posición vertical (eje abajo): mayor pérdida de grasa."
 }
 
-# =====================
 # Umbrales NLGI
-# =====================
 NLGI_THRESHOLDS = [(80, "3"), (160, "2"), (240, "1"), (np.inf, "0")]
 
-# =====================
 # Tipos de rodamientos e imágenes
-# =====================
 BEARING_TYPES = {
     "Bolas": "images/rodamientos_bolas.png",
     "Rodillos": "images/rodamientos_rodillos.png",
@@ -56,9 +42,7 @@ BEARING_TYPES = {
     "Axial": "images/rodamientos_axial.png",
 }
 
-# =====================
 # Funciones auxiliares
-# =====================
 
 def calc_Dm(d, D): return (d + D) / 2
 
@@ -78,39 +62,38 @@ def select_NLGI(DN, visc40):
 def select_thickener(amb):
     return "Sulfonato de calcio complejo" if ("Agua" in amb or "Vibración" in amb) else "Complejo de litio"
 
-# =====================
 # Función principal
-# =====================
 
 def main():
     # Encabezado con logo y datos del creador
     cols = st.columns([1, 8])
     if os.path.exists("logo_mobil.png"):
         cols[0].image("logo_mobil.png", width=80)
-    cols[1].markdown(
-        "# Selector de Grasa para Rodamientos\n"
-        "**Javier Parada**  
-"
-        "Ingeniero de Soporte en Campo"
-    )
+    header_text = """
+# Selector de Grasa para Rodamientos
+
+**Javier Parada**  
+Ingeniero de Soporte en Campo
+"""
+    cols[1].markdown(header_text)
     st.markdown("---")
 
-    # Expansiones de ayuda
+    # Definiciones de carga y montaje
     with st.expander("Definición de carga de trabajo"):
-        for lvl, desc in LOAD_DESCR.items(): st.write(f"**{lvl}**: {desc}")
-
+        for lvl, desc in LOAD_DESCR.items():
+            st.write(f"**{lvl}**: {desc}")
     with st.expander("Posición de montaje"):
-        for pos, desc in POS_DESCR.items(): st.write(f"**{pos}**: {desc}")
-
+        for pos, desc in POS_DESCR.items():
+            st.write(f"**{pos}**: {desc}")
     with st.expander("Tipos de rodamiento"):
-        cols = st.columns(len(BEARING_TYPES))
-        for idx, (name, img) in enumerate(BEARING_TYPES.items()):
+        cols2 = st.columns(len(BEARING_TYPES))
+        for i, (name, img) in enumerate(BEARING_TYPES.items()):
             if os.path.exists(img):
-                cols[idx].image(img, caption=name, use_container_width=True)
+                cols2[i].image(img, caption=name, use_container_width=True)
             else:
-                cols[idx].write(f"Imagen no disponible: {name}")
+                cols2[i].write(f"Imagen no disponible: {name}")
 
-    # Formulario de entradas
+    # Entradas de usuario
     tipo     = st.selectbox("Tipo de rodamiento", list(BEARING_TYPES.keys()))
     rpm      = st.number_input("Velocidad (RPM)", 1500.0)
     d        = st.number_input("Diámetro interior (mm)", 50.0)
@@ -121,7 +104,6 @@ def main():
     ambs     = st.multiselect("Ambiente de operación", ["Agua", "Polvo", "Alta temperatura", "Vibración"])
 
     if st.button("Calcular"):
-        # Cálculos
         Dm        = calc_Dm(d, D)
         DN        = calc_DN(rpm, Dm)
         visc40    = calc_base_viscosity(DN)
@@ -131,7 +113,7 @@ def main():
         bases     = ["Mineral", "Semi-sintética", "Sintética"]
         interval  = int((2000 / LOAD_FACTORS[carga]) * pos_factors[posicion])
 
-        # Resultados
+        # Mostrar resultados
         st.subheader("Resultados")
         st.write(f"**DN (n·Dm):** {DN:.0f} mm/min")
         st.write(f"**Viscosidad base:** {visc40:.1f} cSt")
@@ -140,7 +122,8 @@ def main():
         st.write(f"**Espesante:** {espesante}")
         st.write(f"**Intervalo relubricación:** {interval} h")
         st.write("**Opciones de aceite base:**")
-        for b in bases: st.write(f"- {b}")
+        for b in bases:
+            st.write(f"- {b}")
 
         # Generar PDF
         pdf = FPDF()
@@ -165,3 +148,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
