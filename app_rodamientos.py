@@ -11,7 +11,7 @@ import numpy as np                # Para cálculos numéricos
 A_SKF = 0.7    # Constante A de la fórmula de viscosidad
 B_SKF = 0.23   # Exponente B de la fórmula de viscosidad
 
-# Umbrales para grado de consistencia NLGI según Ks = DN / ν40
+# Umbrales para grado de consistencia NLGI según Ks = DN / v40
 NLGI_THRESHOLDS = [
     (80,   "3"),
     (160,  "2"),
@@ -41,7 +41,7 @@ def calc_DN(n, Dm):
 
 
 def calc_base_viscosity(DN):
-    """Calcula la viscosidad base (cSt @40 °C) usando la fórmula SKF."""
+    """Calcula la viscosidad base (cSt @40 °C) usando la fórmula SKF."""
     return A_SKF * (DN ** B_SKF)
 
 
@@ -90,31 +90,31 @@ def main():
         visc_corr = adjust_for_load(visc40, carga)
         NLGI, Ks  = select_NLGI(DN, visc40)
         espesante = select_thickener(ambiente)
-        base      = "Sintética" if temp > 100 else "Mineral"
+        base      = "Sintetica" if temp > 100 else "Mineral"
         intervalo = int(2000 / LOAD_FACTORS[carga])
 
-        # Mostrar resultados
+        # Mostrar resultados sin caracteres especiales
         st.subheader("Resultados SKF")
-        st.write(f"• DN (n·Dm): {DN:.0f} mm/min")
-        st.write(f"• Viscosidad base ν40: {visc40:.1f} cSt")
-        st.write(f"• Viscosidad ajustada: {visc_corr:.1f} cSt")
-        st.write(f"• Factor Ks: {Ks:.1f}")
-        st.write(f"• NLGI recomendado: {NLGI}")
-        st.write(f"• Tipo de espesante: {espesante}")
-        st.write(f"• Tipo de base: {base}")
-        st.write(f"• Intervalo de relubricación: {intervalo} horas")
+        st.write(f"DN (n·Dm): {DN:.0f} mm/min")
+        st.write(f"Viscosidad base v40: {visc40:.1f} cSt")
+        st.write(f"Viscosidad ajustada: {visc_corr:.1f} cSt")
+        st.write(f"Factor Ks: {Ks:.1f}")
+        st.write(f"NLGI recomendado: {NLGI}")
+        st.write(f"Tipo de espesante: {espesante}")
+        st.write(f"Tipo de base: {base}")
+        st.write(f"Intervalo relubricacion: {intervalo} horas")
 
-        # Generar PDF resumen
+        # Generar PDF en latin1
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(0, 10, "Selección de Grasa (SKF) - Resumen", ln=True)
+        pdf.cell(0, 10, "Seleccion de Grasa (SKF) - Resumen", ln=True)
         pdf.ln(5)
 
         lines = [
             f"Rodamiento: {tipo}",
             f"DN={DN:.0f} mm/min",
-            f"Viscosidad base ν40: {visc40:.1f} cSt",
+            f"Viscosidad base v40: {visc40:.1f} cSt",
             f"Viscosidad ajustada: {visc_corr:.1f} cSt",
             f"Ks={Ks:.1f}, NLGI={NLGI}",
             f"Espesante: {espesante}",
