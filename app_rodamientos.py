@@ -68,7 +68,7 @@ def select_thickener(amb):
 
 def main():
     # ——— Encabezado con logo y datos del creador ———
-    cols = st.columns([1, 8], gap="small")
+    cols = st.columns([2, 8], gap="small")
     logo_path = "images/logo_mobil.png"
     if os.path.exists(logo_path):
         cols[0].image(logo_path, width=80)
