@@ -68,7 +68,9 @@ def select_thickener(amb):
 def main():
     # Encabezado con logo ampliado y datos del creador
     cols = st.columns([1, 8], gap="small")
-    logo_path = next(iter(glob.glob("logo_mobil.*")), None)
+    # Buscar logo tanto en raíz como en carpeta images
+    logo_candidates = glob.glob("logo_mobil.*") + glob.glob("images/logo_mobil.*")
+    logo_path = logo_candidates[0] if logo_candidates else None
     if logo_path:
         cols[0].image(logo_path, width=150)
     else:
@@ -148,3 +150,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
