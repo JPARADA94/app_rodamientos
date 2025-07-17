@@ -67,15 +67,20 @@ def select_thickener(amb):
 # Función principal
 
 def main():
-    # Encabezado con logo dinámico y datos del creador
-    cols = st.columns([1, 8])
-    logo_files = glob.glob("logo_mobil.*")  # Busca cualquier extensión
-    if logo_files:
-        cols[0].image(logo_files[0], width=80)
+    # ——— Encabezado con logo y datos del creador ———
+    cols = st.columns([1, 8], gap="small")
+    logo_path = "images/logo_mobil.png"
+    if os.path.exists(logo_path):
+        cols[0].image(logo_path, width=80)
+    else:
+        cols[0].write("Logo no encontrado")
     cols[1].markdown(
-        "# Selector de Grasa para Rodamientos  \n"
-        "**Javier Parada**  \n"
-        "Ingeniero de Soporte en Campo"
+        """
+        # Selector de Grasa para Rodamientos  
+        **Javier Parada**  
+        Ingeniero de Soporte en Campo
+        """,
+        unsafe_allow_html=True
     )
     st.markdown("---")
 
