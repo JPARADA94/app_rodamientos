@@ -152,7 +152,7 @@ def main():
     ambs     = st.multiselect("Ambiente de operación", ["Agua", "Polvo", "Alta temperatura", "Vibración"])
 
         # Calcular y mostrar
-    if st.button("Calcular"):
+    if st.button("Calcular", key="calc_button"):
         # Cálculos iniciales
         Dm     = calc_Dm(d, D)
         DN     = calc_DN(rpm, Dm)
