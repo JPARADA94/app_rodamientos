@@ -1,10 +1,11 @@
 # app_rodamientos.py
-# Selector de grasa para rodamientos (versión profesional con encabezado ajustado)
+# Selector de grasa para rodamientos (versión simple de posición y logo dinámico)
 
 import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
 import numpy as np                # Para cálculos numéricos
 import os                         # Para manejo de archivos
+import glob                       # Para buscar archivos de logo
 
 # Configuración de la página
 st.set_page_config(
@@ -17,24 +18,25 @@ st.set_page_config(
 A = 0.7  # Constante A de la fórmula de viscosidad
 B = 0.23 # Exponente B de la fórmula de viscosidad
 
-# Definición de cargas y montaje
+# Definición de carga de trabajo
 LOAD_FACTORS = {"Baja": 1.0, "Media": 1.2, "Alta": 1.5}
 LOAD_DESCR = {
     "Baja": "Aplicaciones ligeras (e.g., ventiladores domésticos) sin golpes.",
     "Media": "Uso industrial normal (e.g., bombas) con vibraciones moderadas.",
     "Alta": "Cargas pesadas o continuas vibraciones (e.g., prensas)."
 }
-pos_factors = {"Horizontal": 1.0, "Vertical (eje arriba)": 0.75, "Vertical (eje abajo)": 0.5}
+
+# Definición de posición de montaje (solo dos opciones)
+pos_factors = {"Horizontal": 1.0, "Vertical": 0.75}
 POS_DESCR = {
-    "Horizontal": "Eje horizontal: retención de grasa estándar.",
-    "Vertical (eje arriba)": "Posición vertical (eje arriba): posible escurrimiento.",
-    "Vertical (eje abajo)": "Posición vertical (eje abajo): mayor pérdida de grasa."
+    "Horizontal": "Eje horizontal: retención estándar de grasa.",
+    "Vertical": "Eje vertical: posible escurrimiento, ajuste de intervalo."
 }
 
-# Umbrales NLGI
+# Umbrales para grado de consistencia NLGI
 NLGI_THRESHOLDS = [(80, "3"), (160, "2"), (240, "1"), (np.inf, "0")]
 
-# Tipos de rodamientos e imágenes
+# Tipos de rodamientos e imágenes (en carpeta images/)
 BEARING_TYPES = {
     "Bolas": "images/rodamientos_bolas.png",
     "Rodillos": "images/rodamientos_rodillos.png",
@@ -65,26 +67,27 @@ def select_thickener(amb):
 # Función principal
 
 def main():
-    # Encabezado con logo y datos del creador
+    # Encabezado con logo dinámico y datos del creador
     cols = st.columns([1, 8])
-    if os.path.exists("logo_mobil.png"):
-        cols[0].image("logo_mobil.png", width=80)
-    header_text = """
-# Selector de Grasa para Rodamientos
-
-**Javier Parada**  
-Ingeniero de Soporte en Campo
-"""
-    cols[1].markdown(header_text)
+    logo_files = glob.glob("logo_mobil.*")  # Busca cualquier extensión
+    if logo_files:
+        cols[0].image(logo_files[0], width=80)
+    cols[1].markdown(
+        "# Selector de Grasa para Rodamientos  \n"
+        "**Javier Parada**  \n"
+        "Ingeniero de Soporte en Campo"
+    )
     st.markdown("---")
 
-    # Definiciones de carga y montaje
+    # Ayudas desplegables
     with st.expander("Definición de carga de trabajo"):
         for lvl, desc in LOAD_DESCR.items():
             st.write(f"**{lvl}**: {desc}")
+
     with st.expander("Posición de montaje"):
         for pos, desc in POS_DESCR.items():
             st.write(f"**{pos}**: {desc}")
+
     with st.expander("Tipos de rodamiento"):
         cols2 = st.columns(len(BEARING_TYPES))
         for i, (name, img) in enumerate(BEARING_TYPES.items()):
@@ -93,7 +96,7 @@ Ingeniero de Soporte en Campo
             else:
                 cols2[i].write(f"Imagen no disponible: {name}")
 
-    # Entradas de usuario
+    # Entradas
     tipo     = st.selectbox("Tipo de rodamiento", list(BEARING_TYPES.keys()))
     rpm      = st.number_input("Velocidad (RPM)", 1500.0)
     d        = st.number_input("Diámetro interior (mm)", 50.0)
@@ -113,7 +116,7 @@ Ingeniero de Soporte en Campo
         bases     = ["Mineral", "Semi-sintética", "Sintética"]
         interval  = int((2000 / LOAD_FACTORS[carga]) * pos_factors[posicion])
 
-        # Mostrar resultados
+        # Resultados
         st.subheader("Resultados")
         st.write(f"**DN (n·Dm):** {DN:.0f} mm/min")
         st.write(f"**Viscosidad base:** {visc40:.1f} cSt")
@@ -131,7 +134,7 @@ Ingeniero de Soporte en Campo
         pdf.set_font("Arial", size=12)
         pdf.cell(0, 10, "Selección de Grasa - Resumen", ln=True)
         pdf.ln(5)
-        for ln in [
+        for line in [
             f"Rodamiento: {tipo}",
             f"DN={DN:.0f} mm/min | Temp={temp}°C | Carga={carga}",
             f"Posición={posicion}",
@@ -140,7 +143,7 @@ Ingeniero de Soporte en Campo
             f"Bases={', '.join(bases)}",
             f"Intervalo={interval} h"
         ]:
-            pdf.cell(0, 8, ln, ln=True)
+            pdf.cell(0, 8, line, ln=True)
         data = pdf.output(dest="S").encode('latin-1')
         st.download_button("Descargar PDF", data=data,
                            file_name="analisis_grasa.pdf",
@@ -148,4 +151,3 @@ Ingeniero de Soporte en Campo
 
 if __name__ == "__main__":
     main()
-
