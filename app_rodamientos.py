@@ -1,11 +1,11 @@
 # app_rodamientos.py
-# Selector de grasa para rodamientos (versión simple de posición y logo dinámico)
+# Selector de grasa para rodamientos (versión profesional - logo ampliado)
 
 import streamlit as st            # Framework para la interfaz web
 from fpdf import FPDF             # Para generar PDF de resultados
 import numpy as np                # Para cálculos numéricos
 import os                         # Para manejo de archivos
-import glob                       # Para buscar archivos de logo
+import glob                       # Para búsqueda de logo dinámico
 
 # Configuración de la página
 st.set_page_config(
@@ -65,43 +65,36 @@ def select_thickener(amb):
     return "Sulfonato de calcio complejo" if ("Agua" in amb or "Vibración" in amb) else "Complejo de litio"
 
 # Función principal
-
 def main():
-    # ——— Encabezado con logo y datos del creador ———
-    cols = st.columns([2, 8], gap="small")
-    logo_path = "images/logo_mobil.png"
-    if os.path.exists(logo_path):
-        cols[0].image(logo_path, width=80)
+    # Encabezado con logo ampliado y datos del creador
+    cols = st.columns([1, 8], gap="small")
+    logo_path = next(iter(glob.glob("logo_mobil.*")), None)
+    if logo_path:
+        cols[0].image(logo_path, width=150)
     else:
         cols[0].write("Logo no encontrado")
     cols[1].markdown(
-        """
-        # Selector de Grasa para Rodamientos  
-        **Javier Parada**  
-        Ingeniero de Soporte en Campo
-        """,
+        "# Selector de Grasa para Rodamientos  \n"
+        "**Javier Parada**  \n"
+        "Ingeniero de Soporte en Campo",
         unsafe_allow_html=True
     )
     st.markdown("---")
 
-    # Ayudas desplegables
+    # Secciones de ayuda desplegable
     with st.expander("Definición de carga de trabajo"):
-        for lvl, desc in LOAD_DESCR.items():
-            st.write(f"**{lvl}**: {desc}")
-
+        for lvl, desc in LOAD_DESCR.items(): st.write(f"**{lvl}**: {desc}")
     with st.expander("Posición de montaje"):
-        for pos, desc in POS_DESCR.items():
-            st.write(f"**{pos}**: {desc}")
-
+        for pos, desc in POS_DESCR.items(): st.write(f"**{pos}**: {desc}")
     with st.expander("Tipos de rodamiento"):
-        cols2 = st.columns(len(BEARING_TYPES))
+        cols2 = st.columns(len(BEARING_TYPES), gap="small")
         for i, (name, img) in enumerate(BEARING_TYPES.items()):
             if os.path.exists(img):
                 cols2[i].image(img, caption=name, use_container_width=True)
             else:
                 cols2[i].write(f"Imagen no disponible: {name}")
 
-    # Entradas
+    # Entradas de usuario
     tipo     = st.selectbox("Tipo de rodamiento", list(BEARING_TYPES.keys()))
     rpm      = st.number_input("Velocidad (RPM)", 1500.0)
     d        = st.number_input("Diámetro interior (mm)", 50.0)
@@ -130,8 +123,7 @@ def main():
         st.write(f"**Espesante:** {espesante}")
         st.write(f"**Intervalo relubricación:** {interval} h")
         st.write("**Opciones de aceite base:**")
-        for b in bases:
-            st.write(f"- {b}")
+        for b in bases: st.write(f"- {b}")
 
         # Generar PDF
         pdf = FPDF()
