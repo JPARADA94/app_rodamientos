@@ -153,24 +153,6 @@ def main():
 
         # Calcular y mostrar
     if st.button("Calcular", key="calc_button"):
-        # Cálculos iniciales
-        Dm     = calc_Dm(d, D)
-        DN     = calc_DN(rpm, Dm)
-        visc40 = calc_base_viscosity(DN)
-        # Advertencia si DN muy bajo: viscosidad calculada puede no ser suficiente para alta carga
-        if DN < 10000:
-            st.warning(f"¡Atención! DN = {DN:.0f} mm/min es bajo; la viscosidad base calculada ({visc40:.1f} mm²/s) puede resultar insuficiente para alta carga.")
-        visc_corr = adjust_for_load(visc40, carga)(visc40, carga)
-        NLGI, Ks  = select_NLGI(DN, visc40)
-        recommended = select_thickener(ambs)
-        bases     = ["Mineral", "Semi-sintética", "Sintética"]
-        interval  = int((2000 / LOAD_FACTORS[carga]) * pos_factors[posicion])
-
-        # Advertencia si DN bajo
-        if note_low_DN:
-            st.warning(f"Nota: DN = {DN:.0f} mm/min es bajo. Se aplica viscosidad mínima de {visc40:.1f} mm²/s.")
-
-    if st.button("Calcular"):
         # Cálculos
         Dm        = calc_Dm(d, D)
         DN        = calc_DN(rpm, Dm)
@@ -184,14 +166,14 @@ def main():
         # Mostrar resultados
         st.subheader("Resultados")
         st.write(f"**DN (n·Dm):** {DN:.0f} mm/min")
-        st.write(f"**Viscosidad del aceite base @40°C (mm²/s, ASTM D445):** {visc40:.1f}")
+        st.write(f"**Viscosidad del aceite base @40°C (mm²/s):** {visc40:.1f}")
         st.write(f"**Viscosidad ajustada:** {visc_corr:.1f} mm²/s")
         st.write(f"**NLGI:** {NLGI} (Ks={Ks:.1f})")
         st.write(f"**Posición de montaje:** {posicion}")
         st.write(f"**Intervalo relubricación:** {interval} h")
 
         # Espesantes
-        st.markdown("**Opciones de espesante (recomendado resaltado):**")
+        st.markdown("**Opciones de espesante (recomendado en verde):**")
         for t in THICKENER_OPTIONS:
             label = f"- {t}"
             if t == recommended:
@@ -227,10 +209,33 @@ def main():
             data=data,
             file_name="analisis_grasa.pdf",
             mime="application/pdf"
+        )()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(0, 10, "Selección de Grasa - Resumen", ln=True)
+        pdf.ln(5)
+        pdf.cell(0, 8, f"Rodamiento: {tipo}", ln=True)
+        pdf.cell(0, 8, f"DN={DN:.0f} mm/min | Temp={temp}°C | Carga={carga}", ln=True)
+        pdf.cell(0, 8, f"Posición: {posicion}", ln=True)
+        pdf.cell(0, 8, f"Viscosidad base @40°C: {visc40:.1f} mm²/s", ln=True)
+        pdf.cell(0, 8, f"Vis ajustada: {visc_corr:.1f} mm²/s", ln=True)
+        pdf.cell(0, 8, f"NLGI={NLGI} (Ks={Ks:.1f})", ln=True)
+        pdf.cell(0, 8, f"Espesante recomendado: {recommended}", ln=True)
+        others = ', '.join([t for t in THICKENER_OPTIONS if t != recommended])
+        pdf.cell(0, 8, f"Otras opciones: {others}", ln=True)
+        pdf.cell(0, 8, f"Bases: {', '.join(bases)}", ln=True)
+        pdf.cell(0, 8, f"Intervalo: {interval} h", ln=True)
+        data = pdf.output(dest="S").encode('latin-1')
+        st.download_button(
+            "Descargar PDF",
+            data=data,
+            file_name="analisis_grasa.pdf",
+            mime="application/pdf"
         )
 
 # Punto de entrada
 if __name__ == "__main__":
     main()
+
 
 
