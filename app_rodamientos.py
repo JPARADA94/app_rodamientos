@@ -151,7 +151,25 @@ def main():
     posicion = st.selectbox("Posición de montaje", list(pos_factors.keys()))
     ambs     = st.multiselect("Ambiente de operación", ["Agua", "Polvo", "Alta temperatura", "Vibración"])
 
-    # Calcular y mostrar
+        # Calcular y mostrar
+    if st.button("Calcular"):
+        # Cálculos iniciales
+        Dm     = calc_Dm(d, D)
+        DN     = calc_DN(rpm, Dm)
+        visc40 = calc_base_viscosity(DN)
+        # Advertencia si DN muy bajo: viscosidad calculada puede no ser suficiente para alta carga
+        if DN < 10000:
+            st.warning(f"¡Atención! DN = {DN:.0f} mm/min es bajo; la viscosidad base calculada ({visc40:.1f} mm²/s) puede resultar insuficiente para alta carga.")
+        visc_corr = adjust_for_load(visc40, carga)(visc40, carga)
+        NLGI, Ks  = select_NLGI(DN, visc40)
+        recommended = select_thickener(ambs)
+        bases     = ["Mineral", "Semi-sintética", "Sintética"]
+        interval  = int((2000 / LOAD_FACTORS[carga]) * pos_factors[posicion])
+
+        # Advertencia si DN bajo
+        if note_low_DN:
+            st.warning(f"Nota: DN = {DN:.0f} mm/min es bajo. Se aplica viscosidad mínima de {visc40:.1f} mm²/s.")
+
     if st.button("Calcular"):
         # Cálculos
         Dm        = calc_Dm(d, D)
@@ -214,4 +232,5 @@ def main():
 # Punto de entrada
 if __name__ == "__main__":
     main()
+
 
